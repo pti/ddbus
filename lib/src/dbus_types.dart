@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'byte_writer.dart';
 import 'dbus_exception.dart';
 import 'extensions.dart';
@@ -24,12 +25,21 @@ abstract class DValue with Marshalable {
 }
 
 abstract class DBasicType extends DValue {
+
   const DBasicType(String signature): super(signature);
 
   dynamic get value;
 
   @override
   String toString() => '${runtimeType}($value)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+          other is DBasicType && runtimeType == other.runtimeType && value == other.value;
+
+  @override
+  int get hashCode => value.hashCode;
 }
 
 abstract class DContainerType extends DValue {
@@ -59,6 +69,17 @@ class DStruct extends DContainerType {
 
   @override
   String toString() => '${runtimeType}$fields';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DStruct &&
+          runtimeType == other.runtimeType &&
+          fieldSignature == other.fieldSignature &&
+          const ListEquality().equals(fields, other.fields);
+
+  @override
+  int get hashCode => fields.hashCode ^ fieldSignature.hashCode;
 }
 
 class DArray<T extends DValue> extends DContainerType {
@@ -95,6 +116,17 @@ class DArray<T extends DValue> extends DContainerType {
 
   @override
   String toString() => '${runtimeType}($itemSignature, $items)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DArray &&
+          runtimeType == other.runtimeType &&
+          itemSignature == other.itemSignature &&
+          const ListEquality().equals(items, other.items);
+
+  @override
+  int get hashCode => itemSignature.hashCode ^ items.hashCode;
 }
 
 extension DByteWriter on ByteWriter {
@@ -166,6 +198,17 @@ class DDictEntry extends DContainerType {
 
   @override
   String toString() => '$runtimeType(key=$key, value=$value)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DDictEntry &&
+          runtimeType == other.runtimeType &&
+          key == other.key &&
+          value == other.value;
+
+  @override
+  int get hashCode => key.hashCode ^ value.hashCode;
 }
 
 class DVariant extends DContainerType {
@@ -184,6 +227,14 @@ class DVariant extends DContainerType {
 
   @override
   String toString() => '$runtimeType($value)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DVariant && runtimeType == other.runtimeType && value == other.value;
+
+  @override
+  int get hashCode => value.hashCode;
 }
 
 class DBoolean extends DBasicType {
@@ -197,78 +248,65 @@ class DBoolean extends DBasicType {
   void marshal(ByteWriter out) => out.writeBoolean(value);
 }
 
-class DByte extends DBasicType {
+abstract class DIntType extends DBasicType {
 
   @override
   final int value;
 
-  const DByte(this.value): assert(value != null), super(TypeCode.byte);
+  const DIntType(this.value, String typeCode): assert(value != null), super(typeCode);
+}
+
+class DByte extends DIntType {
+
+  const DByte(int value): super(value, TypeCode.byte);
 
   @override
   void marshal(ByteWriter out) => out.writeByte(value);
 }
 
-class DUint16 extends DBasicType {
+class DUint16 extends DIntType {
 
-  @override
-  final int value;
-
-  const DUint16(this.value): assert(value != null), super(TypeCode.uint16);
+  const DUint16(int value): super(value, TypeCode.uint16);
 
   @override
   void marshal(ByteWriter out) => out.writeUint16(value);
 }
 
-class DInt16 extends DBasicType {
+class DInt16 extends DIntType {
 
-  @override
-  final int value;
-
-  const DInt16(this.value): assert(value != null), super(TypeCode.int16);
+  const DInt16(int value): super(value, TypeCode.int16);
 
   @override
   void marshal(ByteWriter out) => out.writeInt16(value);
 }
 
-class DUint32 extends DBasicType {
+class DUint32 extends DIntType {
 
-  @override
-  final int value;
-
-  const DUint32(this.value): assert(value != null), super(TypeCode.uint32);
+  const DUint32(int value): super(value, TypeCode.uint32);
 
   @override
   void marshal(ByteWriter out) => out.writeUint32(value);
 }
 
-class DInt32 extends DBasicType {
+class DInt32 extends DIntType {
 
-  @override
-  final int value;
-
-  const DInt32(this.value): assert(value != null), super(TypeCode.int32);
+  const DInt32(int value): super(value, TypeCode.int32);
 
   @override
   void marshal(ByteWriter out) => out.writeInt32(value);
 }
 
-class DUint64 extends DBasicType {
+class DUint64 extends DIntType {
 
-  @override
-  final int value;
-
-  const DUint64(this.value): assert(value != null), super(TypeCode.uint64);
+  const DUint64(int value): super(value, TypeCode.uint64);
 
   @override
   void marshal(ByteWriter out) => out.writeUint64(value);
 }
 
-class DInt64 extends DBasicType {
+class DInt64 extends DIntType {
 
-  @override
-  final int value;
-
-  const DInt64(this.value): assert(value != null), super(TypeCode.int64);
+  const DInt64(int value): super(value, TypeCode.int64);
 
   @override
   void marshal(ByteWriter out) => out.writeInt64(value);
@@ -285,45 +323,41 @@ class DDouble extends DBasicType {
   void marshal(ByteWriter out) => out.writeDouble(value);
 }
 
-class DUnixFD extends DBasicType {
+class DUnixFD extends DIntType {
 
-  @override
-  final int value;
-
-  const DUnixFD(this.value): assert(value != null), super(TypeCode.unixFD);
+  const DUnixFD(int value): super(value, TypeCode.unixFD);
 
   @override
   void marshal(ByteWriter out) => out.writeUnixFd(value);
 }
 
-class DString extends DBasicType {
+abstract class DStringType extends DBasicType {
 
   @override
   final String value;
 
-  const DString(this.value): assert(value != null), super(TypeCode.string);
+  const DStringType(this.value, String typeCode): assert(value != null), super(typeCode);
+}
+
+class DString extends DStringType {
+
+  const DString(String value): super(value, TypeCode.string);
 
   @override
   void marshal(ByteWriter out) => out.writeString(value);
 }
 
-class DObjectPath extends DBasicType {
+class DObjectPath extends DStringType {
 
-  @override
-  final String value;
-
-  const DObjectPath(this.value): assert(value != null), super(TypeCode.objectPath);
+  const DObjectPath(String value): super(value, TypeCode.objectPath);
 
   @override
   void marshal(ByteWriter out) => out.writeObjectPath(value);
 }
 
-class DSignature extends DBasicType {
+class DSignature extends DStringType {
 
-  @override
-  final String value;
-
-  const DSignature(this.value): assert(value != null), super(TypeCode.signature);
+  const DSignature(String value): super(value, TypeCode.signature);
 
   @override
   void marshal(ByteWriter out) => out.writeSignature(value);
@@ -393,4 +427,29 @@ int _alignmentForType(Type type) {
       // when this function gets called (empty array).
       return 4;
   }
+}
+
+extension DStringExt on String {
+  DString toDString() => DString(this);
+  DObjectPath toDObjectPath() => DObjectPath(this);
+  DSignature toDSignature() => DSignature(this);
+}
+
+extension DDoubleExt on double {
+  DDouble toDDouble() => DDouble(this);
+}
+
+extension DBoolExt on bool {
+  DBoolean toDBoolean() => DBoolean(this);
+}
+
+extension DIntExt on int {
+  DByte toDByte() => DByte(this);
+  DInt16 toDInt16() => DInt16(this);
+  DUint16 toDUint16() => DUint16(this);
+  DInt32 toDInt32() => DInt32(this);
+  DUint32 toDUint32() => DUint32(this);
+  DUnixFD toDUnixFD() => DUnixFD(this);
+  DInt64 toDInt64() => DInt64(this);
+  DUint64 toDUint64() => DUint64(this);
 }
