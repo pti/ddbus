@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:collection/collection.dart';
+
 import 'byte_writer.dart';
 import 'dbus_exception.dart';
 import 'extensions.dart';
@@ -127,6 +130,27 @@ class DArray<T extends DValue> extends DContainerType {
 
   @override
   int get hashCode => itemSignature.hashCode ^ items.hashCode;
+}
+
+class DByteArray extends DContainerType {
+
+  final Uint8List bytes;
+
+  DByteArray(this.bytes): super(TypeCode.array + TypeCode.byte);
+
+  @override
+  void marshal(ByteWriter out) {
+    out.writeUint32(bytes.lengthInBytes);
+    out.writeBytes(bytes);
+  }
+
+  @override
+  String toString() => 'DByteArray(len=${bytes.lengthInBytes})';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+          other is DByteArray && const ListEquality().equals(bytes, other.bytes);
 }
 
 extension DByteWriter on ByteWriter {

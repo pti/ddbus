@@ -21,6 +21,7 @@ class ByteReader {
   /// This is useful when reading multiple consecutive messages from the same buffer as the
   /// alignment is always relative to the first byte of a message.
   void markStart() {
+    if (remaining <= 0) return;
     data = ByteData.view(data.buffer, data.offsetInBytes + byteOffset, remaining);
     byteOffset = 0;
   }

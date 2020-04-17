@@ -60,11 +60,11 @@ class ByteWriter {
     final bytes = utf8.encode(value);
     _ensureCapacity(bytes.length + lengthSize + 1);
     lengthSize == 1 ? writeByte(bytes.length) : writeUint32(bytes.length);
-    _writeBytes(bytes);
+    writeBytes(bytes);
     writeByte(0);
   }
 
-  void _writeBytes(Uint8List bytes) {
+  void writeBytes(Uint8List bytes) {
     _ensureCapacity(bytes.lengthInBytes);
 
     final end = _offset + bytes.lengthInBytes;
