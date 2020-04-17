@@ -10,10 +10,18 @@ class DService {
 
   DService(this.client, this.destination, this.path, this.interface);
 
-  Future<T> callMethod<T>(String member) => client.callMethod<T>(
+  Future<T> callMethod<T>(String member, [dynamic body]) => client.callMethod<T>(
       destination: destination,
       path: path,
       interface: interface,
-      member: member
+      member: member,
+      body: body
+  );
+
+  Stream<Message> signalStream({String member, String sender}) => client.signalStream(
+    sender: sender,
+    path: path,
+    interface: interface,
+    member: member
   );
 }

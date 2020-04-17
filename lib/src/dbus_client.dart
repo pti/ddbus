@@ -77,7 +77,7 @@ class DBusClient {
     uid = uid ?? Platform.environment['UID'] ?? _extractUid(address);
 
     _socket = await _connectSocket(address, uid);
-    _inputStream = _socket.asBroadcastStream(onListen: (_) => print('LISTEN'), onCancel: (_) => print('CANCEL'));
+    _inputStream = _socket.asBroadcastStream();
     _guid = await Authenticator.externalAuthenticate(uid, _inputStream, _socket);
 
     _inputStream.listen(null,
@@ -147,6 +147,7 @@ class DBusClient {
     String member,
     dynamic body,
   }) async {
+
     final header = Header.methodCall(
         serial: nextSerial,
         destination: destination,
