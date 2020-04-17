@@ -118,7 +118,7 @@ class DArray<T extends DValue> extends DContainerType {
   void marshal(ByteWriter out) => DByteWriter(out).writeArray(items);
 
   @override
-  String toString() => '${runtimeType}($itemSignature, $items)';
+  String toString() => '${runtimeType}($itemSignature; $items)';
 
   @override
   bool operator ==(Object other) =>
@@ -156,8 +156,8 @@ class DByteArray extends DContainerType {
 extension DByteWriter on ByteWriter {
 
   void writeArray<T extends DValue>(List<T> items) {
-    final lengthOffset = byteOffset;
     writeUint32(0);
+    final lengthOffset = byteOffset - 4;
 
     // Presumably the item alignment is required for empty arrays too, so do it here rather than in item.marshal().
     // https://lists.freedesktop.org/archives/dbus/2016-July/016972.html
